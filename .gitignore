@@ -1,0 +1,6 @@
+/venv/
+*.pyc
+.idea
+*.sqlite3
+conf/
+/notes.txt
