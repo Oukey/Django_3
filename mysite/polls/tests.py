@@ -26,12 +26,12 @@ class QuestionModelTests(TestCase):
 
 def create_question(question_text, days):
     """создание и публикация вопроса"""
-    time = timezone.now() + datetime.timedelta(days=days)
+    time = timezone.now() + datetime.timedelta(dys=days)
     return Question.objects.create(question_text=question_text, pub_date=time)
 
 
 class QuestionIndexViewTests(TestCase):
-    def test_questions(self):
+    def test_no_questions(self):
         """При отсутствии вопроса отображаетсяя выражение 'No polls are available'"""
         response = self.client.get(reverse('polls:index'))
         self.assertEqual(response.status_code, 200)
@@ -44,4 +44,31 @@ class QuestionIndexViewTests(TestCase):
         self.assertQuerysetEqual(
             response.context['latest_question_list'],
             ['<Question: Past question.>']
+        )
+
+    def test_future_question(self):
+        """Проверка неотображения опросов с датой публикации в будущем"""
+        create_question(question_text="Future question.", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertContains(response, "No polls are available.")
+        self.assertQuerysetEqual(response.context['latest_question_list'], [])
+
+    def test_future_question_and_past_question(self):
+        """Отображение ранее опубликованных вопросов при наличии будущих публикаций"""
+        create_question(question_text="Past question.", days=-30)
+        create_question(question_text="Future question.", days=30)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(
+            response.context['latest_question_list'],
+            ['<Question: Past question.>']
+        )
+
+    def test_two_past_questions(self):
+        """Отображение несколькох вопросов"""
+        create_question(question_text="Past question 1.", days=-30)
+        create_question(question_text="Past question 2.", days=-5)
+        response = self.client.get(reverse('polls:index'))
+        self.assertQuerysetEqual(
+            response.context['latest_question_list'],
+            ['<Question: Past question 2.>', '<Question: Past question 1,>']
         )
